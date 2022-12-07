@@ -1,0 +1,23 @@
+library("survival")
+library("survminer")
+
+fit <- survfit(Surv(time, status) ~ sex, data = lung)
+# Kaplan-Meier plots to visualize survival curves
+ggsurvplot(fit,
+           pval = TRUE, conf.int = TRUE,
+           risk.table = TRUE, # Add risk table
+           risk.table.col = "strata", # Change risk table color by groups
+           linetype = "strata", # Change line type by groups
+           surv.median.line = "hv", # Specify median survival
+           ggtheme = theme_bw(), # Change ggplot2 theme
+           palette = c("#E7B800", "#2E9FDF")
+)
+# cumulative events
+ggsurvplot(fit,
+           conf.int = TRUE,
+           risk.table.col = "strata", # Change risk table color by groups
+           ggtheme = theme_bw(), # Change ggplot2 theme
+           palette = c("#E7B800", "#2E9FDF"),
+           fun = "event")
+# Log-Rank test        
+surv_diff <- survdiff(Surv(time, status) ~ sex, data = lung)
