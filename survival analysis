@@ -1,7 +1,31 @@
 library("survival")
 library("survminer")
 
+head(lung)
+* inst: Institution code
+* time: Survival time in days
+* status: censoring status 1=censored, 2=dead
+* age: Age in years
+* sex: Male=1 Female=2
+* ph.ecog: ECOG performance score (0=good 5=dead)
+* ph.karno: Karnofsky performance score (bad=0-good=100) rated by physician
+* pat.karno: Karnofsky performance score as rated by patient
+* meal.cal: Calories consumed at meals
+* wt.loss: Weight loss in last six months
+
 fit <- survfit(Surv(time, status) ~ sex, data = lung)
+summary(fit)
+# * time: the time points on the curve.
+# * n.risk: the number of subjects at risk at time t
+# * n.event: the number of events that occurred at time t.
+# * n.censor: the number of censored subjects, who exit the risk set, without an event, at time t.
+# * surv: estimate of survival probability.
+# * std.err: standard error of survival.
+# * upper: upper end of confidence interval
+# * lower: lower end of confidence interval
+# * strata: indicates stratification of curve estimation. If strata is not NULL, there are multiple curves in the result. The levels of strata (a factor) are the labels for the curves.
+# 如果想看整体的fit结果，可以summary(fit) or summary(fit)$table，但是想看每个时间点的更好的方式则是:surv_summary(fit)
+
 # Kaplan-Meier plots to visualize survival curves
 ggsurvplot(fit,
            pval = TRUE, conf.int = TRUE,
