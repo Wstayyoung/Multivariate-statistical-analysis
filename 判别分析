@@ -1,0 +1,83 @@
+---
+title: "Discriminant Analysis"
+output: word_document
+date: "2022-12-09"
+---
+
+```{r eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+# 1.6名健康人与7名心肌梗塞患者的三项心电图指标X1,X2,X3见下表。若有一个人的三项指标分别为420.50，32.42，1.98，请判别该人是健康人还是心肌梗塞者（数据见cardiomyopathy.txt）。
+# 本文使用马氏距离进行判别
+
+library(WeDiBaDis)
+library(ggplot2)
+cardiomyopathy <- read.table(file = "cardiomyopathy.txt", header = T)
+
+# healthy <- 1, patients <- 0
+cardiomyopathy$ID <- as.factor(c(rep(1,6), rep(0,7))) 
+
+base_plot <- ggplot(data = cardiomyopathy, aes(color = ID))
+# 显示X1和X2的关系
+base_plot + 
+  geom_point(aes(x = X1, y = X2)) + 
+  geom_text(aes(x = X1, y = X2, label = ID), vjust = -0.8) +
+  labs(x = "X1", y = "X2")
+# 显示X1和X3的关系
+base_plot + 
+  geom_point(aes(x = X1, y = X3)) + 
+  geom_text(aes(x = X1, y = X3, label = ID), vjust = -0.8) +
+  labs(x = "X1", y = "X3")
+# 显示X2和X3的关系
+base_plot + 
+  geom_point(aes(x = X2, y = X3)) + 
+  geom_text(aes(x = X2, y = X3, label = ID), vjust = -0.8) +
+  labs(x = "X2", y = "X3")
+
+# 使用马氏距离进行判断
+cardiomyopathy.matrix <- as.matrix(cardiomyopathy) 
+cardiomyopathy.matrix <- matrix(as.numeric(cardiomyopathy.matrix), ncol = 4)
+# 新样本newsample
+newsample <- matrix(c(420.50, 32.42, 1.98), nrow = 1)
+WDB <- WDBdisc(data = cardiomyopathy.matrix, datatype = "m", classcol = 1,
+               new.ind = newsample, distance = "Mahalanobis")
+WDB$pred
+# 模型判别该人是心肌梗塞者
+```
+
+```{r message=FALSE, warning=FALSE}
+# 2.现有88名健康人（NC_sample.txt）与371名膀胱癌患者（Bladder_sample.txt）的MiRNA表达谱数据。请使用Fisher线性判别方法，判别33个未知样本（test.txt）是否为膀胱癌患者。（注：1.MiRNA的ID存放于miRNA_ID_used.txt文件；2.要求参与线性判别的miRNA数量小于10；3.miRAN的筛选方案可以自行设计）
+
+# 本文使用秩和检验筛选出差异倍数最大的9个miRNA基因，并用fisher线性判别分析进行判别，得到的模型判对率为87%。
+# 用该模型对33个未知样本进行判别，判别结果：膀胱癌患者28个，健康人5个。
+
+library(MASS)
+library(ggplot2)
+library(magrittr)
+
+miRNA_ID_used <- read.table(file = "miRNA_ID_used.txt", header = T)
+NC_sample <- read.table(file = "NC_sample.txt", header = T)
+Bladder_sample <- read.table(file = "Bladder_sample.txt", header = T)
+test <- read.table(file = "test.txt", header = T) %>% t() %>% data.frame()
+# 使用秩和检验筛选出差异倍数最大的9个基因
+expr <- cbind(NC_sample, Bladder_sample)
+labels <- c(rep(0,88), rep(1,371))
+# NC_sample <- 0,Bladder_sample <- 1
+source("Wilcoxon_test.R")
+w_result <- Wilcoxon_test(expr, labels)
+DEG <- w_result[which(w_result[,2]<0.05 & w_result[,4]>1 & w_result[,3]<0.05),]
+DEG_top10 <- DEG[order(DEG[,4],decreasing = T)[1:9],]
+expr_DEG <- expr[match(DEG_top10[,1],rownames(expr)),]
+expr_DEGt <- t(expr_DEG)
+group <- c(rep(0,88), rep(1,371)) %>% as.factor()
+expr_DEGt <- data.frame(group, expr_DEGt)
+ld <- lda(group ~ X41+X134+X144+X258+X265+X294+X340+X345+X409, 
+          data = expr_DEGt)
+ld.pred <- predict(ld, expr_DEGt)
+confusion <- data.frame(Predivtion = ld.pred$class, Actual = expr_DEGt$group)
+table(confusion)
+# 混淆矩阵
+sum(diag(prop.table(table(confusion))))
+# 判对率为87.0%
+test.pred <- predict(ld, newdata = test)
+test.pred$class
+```
+
